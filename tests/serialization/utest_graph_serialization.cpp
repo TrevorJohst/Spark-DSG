@@ -215,4 +215,39 @@ TEST(GraphSerialization, UpdateDsgFromBinaryWithCorrection) {
   EXPECT_EQ(original, updated);
 }
 
+TEST(GraphSerialization, DeletedEdges) {
+  using namespace std::chrono_literals;
+  DynamicSceneGraph original;
+  original.emplaceNode(3, 0, std::make_unique<NodeAttributes>());
+  original.emplaceNode(3, 1, std::make_unique<NodeAttributes>());
+  ASSERT_TRUE(original.insertEdge(0, 1));
+
+  DynamicSceneGraph updated;
+  {  // check that serialization is correct
+    std::vector<uint8_t> buffer;
+    io::binary::writeGraph(original, buffer);
+    io::binary::updateGraph(updated, buffer);
+    EXPECT_EQ(original, updated);
+    EXPECT_TRUE(updated.hasEdge(0, 1));
+  }
+
+  ASSERT_TRUE(original.removeEdge(0, 1));
+  {  // check that serialization is correct
+    std::vector<uint8_t> buffer;
+    io::binary::writeGraph(original, buffer);
+    io::binary::updateGraph(updated, buffer);
+    EXPECT_EQ(original, updated);
+    EXPECT_FALSE(updated.hasEdge(0, 1));
+  }
+
+  ASSERT_TRUE(original.insertEdge(0, 1));
+  {  // check that serialization is correct
+    std::vector<uint8_t> buffer;
+    io::binary::writeGraph(original, buffer);
+    io::binary::updateGraph(updated, buffer);
+    EXPECT_EQ(original, updated);
+    EXPECT_TRUE(updated.hasEdge(0, 1));
+  }
+}
+
 }  // namespace spark_dsg
