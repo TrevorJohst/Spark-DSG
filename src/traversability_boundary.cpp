@@ -290,7 +290,8 @@ double Boundary::computeIoU(const Boundary& other) const {
   if (!intersection.valid()) {
     return 0.0;
   }
-  return intersection.area() / (area() + other.area() - intersection.area());
+  const double int_area = intersection.area();
+  return int_area / (area() + other.area() - int_area);
 }
 
 double Boundary::distanceToSide(const Side side, const Eigen::Vector2d& point) const {
@@ -315,6 +316,11 @@ double Boundary::distanceToSide(const Side side, const Eigen::Vector2d& point) c
     default:
       throw std::out_of_range("Invalid side index for Boundary.");
   }
+}
+
+double Boundary::distanceToSide1D(const Side side, double coordinate) const {
+  return side.isLower() ? getCoordinate(side) - coordinate
+                        : coordinate - getCoordinate(side);
 }
 
 Side Boundary::lineIntersectsSide(const Eigen::Vector2d& source) const {
@@ -367,6 +373,45 @@ double Boundary::maxTraversableDistance(const Boundary& other, Side side) const 
     return 0.0;
   }
   return this->side(side).maxTraversableDistance(other.side(side.opposite()));
+}
+
+void Boundary::mergeTraversabilityStates(const Boundary& other,
+                                         double margin,
+                                         bool pessimistic) {
+  for (const auto s : Side::ALL) {
+    if (distanceToSide1D(s, other.getCoordinate(s.opposite())) > 0.0) {
+      continue;  // No overlap on orthogonal axis
+    }
+    // Orthogonal distance between the sides, where positive distances mean this is
+    // inside other.
+    const double distance = distanceToSide1D(s, other.getCoordinate(s));
+    if (distance < -margin) {
+      continue;  // Too far inside to be relevant.
+    }
+    auto this_side = this->side(s);
+    const auto other_side = other.side(s);
+    const double start = std::max(this_side.min, other_side.min);
+    const double end = std::min(this_side.max, other_side.max);
+
+    if (end < start) {
+      continue;
+    }
+
+    if (distance > 0.0) {
+      // This area is inside the other boundary, thus traversable.
+      for (size_t i = this_side.index(start); i <= this_side.index(end); ++i) {
+        fuseStates(TraversabilityState::TRAVERSABLE, this_side.states[i], pessimistic);
+      }
+    }
+    if (distance <= margin) {
+      // Within the margin area fuse other states.
+      for (size_t i = this_side.index(start); i <= this_side.index(end); ++i) {
+        fuseStates(other_side.getState(this_side.coordFromIndex(i)),
+                   this_side.states[i],
+                   pessimistic);
+      }
+    }
+  }
 }
 
 void Boundary::toAttributes(TraversabilityNodeAttributes& attrs) const {
@@ -439,8 +484,7 @@ TraversabilityState Boundary::BoundarySide::getState(double coordinate) const {
   if (states.size() == 0) {
     return TraversabilityState::UNKNOWN;
   }
-  size_t idx = static_cast<size_t>((coordinate - min) / (max - min) * states.size());
-  return states[idx];
+  return states[index(coordinate)];
 }
 
 TraversabilityStates Boundary::BoundarySide::getStates(double from, double to) const {
@@ -497,7 +541,7 @@ void Boundary::BoundarySide::fuseBoundaryStates(
   }
 
   // Interpolate all voxels in the range.
-  size_t idx = static_cast<size_t>((start - min) / (max - min) * states.size());
+  size_t idx = index(start);
   const double voxel_size = voxelSize();
   for (double coordinate = start + 0.5 * voxel_size; coordinate < end;
        coordinate += voxel_size, ++idx) {
@@ -526,6 +570,23 @@ double& Boundary::coord(Side side) {
     default:
       throw std::out_of_range("Invalid side index for Boundary.");
   }
+}
+
+size_t Boundary::BoundarySide::index(double coordinate) const {
+  if (states.size() <= 1) {
+    return 0;
+  }
+  if (coordinate >= max) {
+    return states.size() - 1;
+  }
+  return static_cast<size_t>((coordinate - min) / voxelSize());
+}
+
+double Boundary::BoundarySide::coordFromIndex(size_t index) const {
+  if (states.size() <= 1) {
+    return (max + min) / 2.0;
+  }
+  return min + voxelSize() * (index + 0.5);
 }
 
 }  // namespace spark_dsg

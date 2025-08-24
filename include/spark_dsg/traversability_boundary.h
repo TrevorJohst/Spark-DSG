@@ -262,6 +262,15 @@ struct Boundary {
   double distanceToSide(const Side side, const Eigen::Vector2d& point) const;
 
   /**
+   * @brief Compute the orthogonal distance of a point to a side of the boundary.
+   * @param side The side to compute the distance to.
+   * @param coordinate The coordinate of the point.
+   * @return The distance to the side, where positive distances are outside the
+   * boundary, negative distances are inside.
+   */
+  double distanceToSide1D(const Side side, double coordinate) const;
+
+  /**
    * @brief Compute which side a line from source to the center of this boundary
    * intersects.
    */
@@ -298,6 +307,18 @@ struct Boundary {
    * changing the voxel size.
    */
   void setCoordinate(Side side, double coordinate, bool preserve_voxel_size = true);
+
+  /**
+   * @brief Update the traversability states of this boundary from another boundary.
+   * @param other The other boundary to merge from.
+   * @param margin Orthogonal distance for which a traversability state carries
+   * information.
+   * @param pessimistic If true, use a pessimistic fusion of states, where UNKNOWN
+   * overrides TRAVERSABLE states.
+   */
+  void mergeTraversabilityStates(const Boundary& other,
+                                 double margin,
+                                 bool pessimistic = false);
 
   /**
    * @brief Write the boundary properties to the given TraversabilityNodeAttributes.
@@ -367,6 +388,17 @@ struct Boundary {
         std::function<void(TraversabilityState, TraversabilityState&)> fuse_fn);
 
     void fuseBoundaryStates(const BoundarySide& other, bool pessimistic = false);
+
+   protected:
+    friend Boundary;
+    /**
+     * @brief Get the index of traversability states for a given coordinate.
+     */
+    size_t index(double coordinate) const;
+    /**
+     * @brief Get the coordinate from the index of traversability states.
+     */
+    double coordFromIndex(size_t index) const;
   };
 
   BoundarySide side(Side side);
