@@ -2,29 +2,29 @@
 
 namespace spark_dsg {
 
-bool traversable(TraversabilityState state, bool optimistic) {
+bool isTraversable(TraversabilityState state, bool optimistic) {
   return state == TraversabilityState::TRAVERSABLE ||
          state == TraversabilityState::TRAVERSED ||
          (optimistic && state == TraversabilityState::UNKNOWN);
 }
 
-bool traversable(const TraversabilityStates& states, bool optimistic) {
+bool isTraversable(const TraversabilityStates& states, bool optimistic) {
   for (const auto& state : states) {
-    if (!traversable(state, optimistic)) {
+    if (!isTraversable(state, optimistic)) {
       return false;
     }
   }
   return true;
 }
 
-bool intraversable(TraversabilityState state, bool optimistic) {
+bool isIntraversable(TraversabilityState state, bool optimistic) {
   return state == TraversabilityState::INTRAVERSABLE ||
          (optimistic && state == TraversabilityState::UNKNOWN);
 }
 
-bool intraversable(const TraversabilityStates& states, bool optimistic) {
+bool isIntraversable(const TraversabilityStates& states, bool optimistic) {
   for (const auto& state : states) {
-    if (intraversable(state, optimistic)) {
+    if (isIntraversable(state, optimistic)) {
       return true;
     }
   }
