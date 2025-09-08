@@ -87,7 +87,7 @@ DynamicSceneGraph::Ptr DynamicSceneGraph::fromNames(const LayerNames& layers) {
   return std::make_shared<DynamicSceneGraph>(layersFromNames(layers), layers);
 }
 
-void DynamicSceneGraph::clear() {
+void DynamicSceneGraph::clear(bool include_mesh) {
   layers_.clear();
   layer_partitions_.clear();
 
@@ -95,7 +95,9 @@ void DynamicSceneGraph::clear() {
 
   interlayer_edges_.reset();
 
-  mesh_.reset();
+  if (include_mesh) {
+    mesh_.reset();
+  }
 
   for (const auto& id : layer_ids_) {
     layers_[id] = std::make_unique<SceneGraphLayer>(id);
