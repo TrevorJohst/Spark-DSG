@@ -39,7 +39,7 @@ import time
 
 import numpy as np
 
-from spark_dsg._dsg_bindings import DsgLayers, DynamicSceneGraph, NodeSymbol
+from spark_dsg._dsg_bindings import DsgLayers, NodeSymbol, SceneGraph
 
 try:
     import open3d as o3d
@@ -378,7 +378,7 @@ class RemoteVisualizer:
             if new_msg == b"shutdown":
                 break
 
-            G = DynamicSceneGraph.from_binary(new_msg)
+            G = SceneGraph.from_binary(new_msg)
             self._update_geometries(G)
             self._update_names(G)
             self._update_render_geometry()

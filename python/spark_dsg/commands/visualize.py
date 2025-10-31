@@ -9,6 +9,6 @@ from spark_dsg.open3d_visualization import render_to_open3d
 @click.argument("filepath", type=click.Path(exists=True))
 def cli(filepath):
     """Visualize a scene graph from FILEPATH using Open3D."""
-    G = dsg.DynamicSceneGraph.load(filepath)
+    G = dsg.SceneGraph.load(filepath)
     render_to_open3d(G)
     print("Done.")
